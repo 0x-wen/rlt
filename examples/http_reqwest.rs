@@ -38,11 +38,6 @@ impl BenchSuite for HttpBench {
 
     async fn bench(&mut self, client: &mut Self::WorkerState, _: &IterInfo) -> Result<IterReport> {
         let t = Instant::now();
-        // let resp = client
-        //     .get(self.url.clone())
-        //     .send()
-        //     .await
-        //     .context("Failed to send request")?;
         let resp = match self.method.to_uppercase().as_str() {
             "POST" => {
                 let data = self.data.clone().unwrap_or_default();
@@ -55,11 +50,25 @@ impl BenchSuite for HttpBench {
                     .await
                     .context("Failed to send POST request")?
             }
-            _ => client
-                .get(self.url.clone())
-                .send()
-                .await
-                .context("Failed to send GET request")?,
+            "GET" => {
+                let mut url = self.url.clone();
+                if let Some(data) = &self.data {
+                    if !data.is_empty() {
+                        let params: serde_json::Value = serde_json::from_str(data).context("Invalid JSON data")?;
+                        if let serde_json::Value::Object(map) = params {
+                            let mut pairs = url.query_pairs_mut();
+                            for (key, value) in map {
+                                pairs.append_pair(&key, &value.to_string());
+                            }
+                        }
+                    }
+                }
+                // println!("url: {:?}", url.to_string());
+                client.get(url).send().await.context("Failed to send GET request")?
+            }
+            _ => {
+                return Err(anyhow::anyhow!("Unsupported HTTP method: {}", self.method));
+            }
         };
         let status = resp.status().into();
         let bytes = resp.bytes().await.context("Failed to read response bytes")?.len() as u64;
@@ -82,4 +91,3 @@ async fn main() -> Result<()> {
     }
     Ok(())
 }
-
