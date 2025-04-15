@@ -2,6 +2,7 @@ use anyhow::{Context, Result};
 use async_trait::async_trait;
 use clap::Parser;
 use log::error;
+use reqwest::header::{HeaderMap, HeaderValue};
 use reqwest::{Client, Url};
 use rlt::{
     cli::BenchCli,
@@ -63,8 +64,24 @@ impl BenchSuite for HttpBench {
                         }
                     }
                 }
-                // println!("url: {:?}", url.to_string());
-                client.get(url).send().await.context("Failed to send GET request")?
+                let mut headers = HeaderMap::new();
+                headers.insert("accept-encoding", HeaderValue::from_static("gzip"));
+                headers.insert("Connection", HeaderValue::from_static("keep-alive"));
+                headers.insert("Authorization", HeaderValue::from_static("eyJsb2dpblRpbWUiOjE3MjUzNDUyMTI1MzMsInR5cCI6IkpXVCIsImFsZyI6IkhTMjU2In0.eyJ1c2VySWQiOjEzNTksInVpZCI6IjM0NTk1ODQ2MTUiLCJ3YXkiOiJBTkRST0lEIiwicmVnaW9uSWQiOjB9.tA9Ma51QTpO2yT75bXDJDyntAMr9m9_WqiembGfn1vs"));
+                headers.insert("language", HeaderValue::from_static("zh_TW"));
+                headers.insert("way", HeaderValue::from_static("ANDROID"));
+                headers.insert("appdisplayname", HeaderValue::from_static("ME Pass"));
+                headers.insert("appversion", HeaderValue::from_static("2.1.0.202408131741"));
+                headers.insert("timezone", HeaderValue::from_static("Asia/Shanghai"));
+                headers.insert("device", HeaderValue::from_static("xxx25654"));
+                headers.insert("devicename", HeaderValue::from_static("Xiaomi MIX3"));
+
+                client
+                    .get(url)
+                    .headers(headers)
+                    .send()
+                    .await
+                    .context("Failed to send GET request")?
             }
             _ => {
                 return Err(anyhow::anyhow!("Unsupported HTTP method: {}", self.method));
@@ -73,6 +90,7 @@ impl BenchSuite for HttpBench {
         let status = resp.status().into();
         let bytes = resp.bytes().await.context("Failed to read response bytes")?.len() as u64;
         let duration = t.elapsed();
+
         // println!("status: {:?}, bytes: {:?}, duration: {:?}", status, bytes, duration);
         Ok(IterReport { duration, status, bytes, items: 1 })
     }

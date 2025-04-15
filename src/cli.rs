@@ -46,7 +46,7 @@
 //!
 //!           When set, benchmark stops after reaching the duration.
 //!
-//!           Examples: -z 10s, -z 5m, -z 1h
+//!           Examples: -d 10s, -d 5m, -d 1h
 //!
 //!   -r, --rate <RATE>
 //!           Rate limit for benchmarking, in iterations per second (ips)
@@ -86,7 +86,13 @@ use std::{
     num::{NonZeroU32, NonZeroU64, NonZeroU8},
 };
 
-use clap::{Parser, ValueEnum};
+use clap::{
+    builder::{
+        styling::{AnsiColor, Effects},
+        Styles,
+    },
+    Parser, ValueEnum,
+};
 use crossterm::tty::IsTty;
 use tokio::{
     sync::{mpsc, watch},
@@ -102,6 +108,14 @@ use crate::{
 };
 
 #[derive(Parser, Clone, Copy, Debug)]
+#[clap(
+    styles(Styles::styled()
+        .header(AnsiColor::Yellow.on_default() | Effects::BOLD)
+        .usage(AnsiColor::Yellow.on_default() | Effects::BOLD)
+        .literal(AnsiColor::Green.on_default() | Effects::BOLD)
+        .placeholder(AnsiColor::Cyan.on_default())
+    )
+)]
 #[allow(missing_docs)]
 pub struct BenchCli {
     /// Number of workers to run concurrently
@@ -118,7 +132,7 @@ pub struct BenchCli {
     ///
     /// When set, benchmark stops after reaching the duration.
     ///
-    /// Examples: -z 10s, -z 5m, -z 1h
+    /// Examples: -d 10s, -d 5m, -d 1h
     #[clap(long, short = 'd')]
     pub duration: Option<humantime::Duration>,
 
